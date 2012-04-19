@@ -17,6 +17,10 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 # 
+# Modified by Kevin Mehall <km@kevinmehall.net> Apr 2012
+#  * Optimize
+#  * Add iterator interface
+
 
 from gnuradio import gr
 import gnuradio.gr.gr_threading as _threading
@@ -72,25 +76,38 @@ class _queue_sink_base(gr.hier_block2):
 			gr.io_signature(0, 0, 0) # Output signature
 		)
 		#create message sink
-		self._msgq = gr.msg_queue(1)
+		self._msgq = gr.msg_queue(4)
 		message_sink = gr.message_sink(self._item_size*self._vlen, self._msgq, False) #False -> blocking
 		#connect
 		self.connect(self, message_sink)
-		self.arr = ''
+
+		self.arr = None
+		self.idx = 0					
 		
 	def pop(self):
 		"""!
 		Pop a new sample off the front of the queue.
 		@return a new sample
 		"""
-		while len(self.arr) < self._item_size*self._vlen:
+		
+		if self.arr is None:
 			msg = self._msgq.delete_head()
-			self.arr = self.arr + msg.to_string()
-		sample = self.arr[:self._item_size*self._vlen]
-		self.arr = self.arr[self._item_size*self._vlen:]
-		sample = map(self._cast, numpy.fromstring(sample, self._numpy))
+			self.arr = numpy.fromstring(msg.to_string(), self._numpy)
+		
+		sample = self.arr[self.idx:self.idx+self._vlen]
+		self.idx += self._vlen
+		
+		if self.idx >= len(self.arr):
+			self.idx = 0
+			self.arr = None
+		
+		sample = map(self._cast, sample)
 		if self._vlen == 1: return sample[0]
 		return sample
+		
+	next = pop
+	
+	def __iter__(self): return self
 
 class queue_sink_c(_queue_sink_base):
 	_item_size = gr.sizeof_gr_complex

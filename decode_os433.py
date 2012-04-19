@@ -9,10 +9,6 @@ tb.connect(src, sink)
 
 tb.start()
 
-def queue_iterator(queue_sink):
-	while True:
-		yield sink.pop()
-
 level = -0.35
 rate = 44100.0
 
@@ -51,7 +47,7 @@ pkt = []
 htimes = []
 ltimes = []
 
-for level, time, abstime in transition(queue_iterator(sink), level):
+for level, time, abstime in transition(sink, level):
 	time = time / rate * 1e6
 	#print time, level
 	
