@@ -1,14 +1,17 @@
 from gnuradio import gr
 import matplotlib.pyplot as plt
-
+import gr_queue
+				
 src = gr.file_source(gr.sizeof_float, "433.bin")
-snk = gr.vector_sink_f()
+sink = gr_queue.queue_sink_f()
 tb = gr.top_block()
-tb.connect(src, snk)
-tb.run()
+tb.connect(src, sink)
 
-data = snk.data()#[1250000:1350000]
+tb.start()
 
+def queue_iterator(queue_sink):
+	while True:
+		yield sink.pop()
 
 level = -0.35
 rate = 44100.0
@@ -29,11 +32,6 @@ def handle_packet(bytes):
 	temp = temp * 9.0/5.0 + 32
 	print 'received:', valid, channel, temp, batt, hbit
 
-#plt.plot(data)
-#plt.plot([0, len(data)], [level, level])
-
-print min(data), max(data), sum(data) / len(data)
-
 def transition(data, level=-0.2):
 	last = False
 	last_i = 0
@@ -53,7 +51,7 @@ pkt = []
 htimes = []
 ltimes = []
 
-for level, time, abstime in transition(data, level):
+for level, time, abstime in transition(queue_iterator(sink), level):
 	time = time / rate * 1e6
 	#print time, level
 	
