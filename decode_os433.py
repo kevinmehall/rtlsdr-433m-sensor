@@ -8,38 +8,39 @@ import osmosdr
 		
 		
 thresh = -22
-device_rate = 2048000
+rate = 22050
+audio_rate = 44100
+device_rate = audio_rate * 25
 freq_offs = -100e3
 freq = 433.8e6
 
 level = -0.35
-rate = 44100.0
 
 osmosdr_source = osmosdr.source_c("")
 osmosdr_source.set_center_freq(freq)
 osmosdr_source.set_samp_rate(device_rate)
 
-freq_filter = gr.freq_xlating_fir_filter_ccc(40, (firdes.low_pass(1, device_rate, 40000, 5000, firdes.WIN_HAMMING, 6.76)), freq_offs, device_rate)
-resampler = blks2.rational_resampler_ccc(
-	interpolation=441,
-	decimation=512,
-	taps=None,
-	fractional_bw=None,
-)
+taps = firdes.low_pass(1, device_rate, 40000, 5000, firdes.WIN_HAMMING, 6.76)
+freq_filter = gr.freq_xlating_fir_filter_ccc(25, taps, freq_offs, device_rate)
+
 am_demod = blks2.am_demod_cf(
-	channel_rate=44100,
+	channel_rate=audio_rate,
 	audio_decim=1,
 	audio_pass=5000,
 	audio_stop=5500,
 )
-audio_sink = audio.sink(44100, "", True)
+resampler = blks2.rational_resampler_fff(
+	interpolation=1,
+	decimation=2,
+)
+audio_sink = audio.sink(audio_rate, "", True)
 sink = gr_queue.queue_sink_f()
 
 
 tb = gr.top_block()
-tb.connect(osmosdr_source, freq_filter, resampler, am_demod)
+tb.connect(osmosdr_source, freq_filter, am_demod)
 tb.connect(am_demod, audio_sink)
-tb.connect(am_demod, sink)
+tb.connect(am_demod, resampler, sink)
 
 tb.start()
 
@@ -79,7 +80,7 @@ htimes = []
 ltimes = []
 
 for level, time, abstime in transition(sink, level):
-	time = time / rate * 1e6
+	time = time / float(rate) * 1e6
 	#print time, level
 	
 	if state == 'wait' and level:
