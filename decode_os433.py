@@ -200,6 +200,12 @@ class Packet(object):
 		return ' '.join('%02X'%x for x in self.bytes)
 		
 if __name__ == '__main__':
+	import time
+	logfilebase = 'log'
+	logfiles = {}
+	for channel in range(1, 3+1):
+		logfiles[channel] = open("{0}{1}.csv".format(logfilebase, channel), 'at')
+
 	stream = rtlsdr_am_stream(freq, freq_offs, decimate_am=1, play_audio=True)
 	stream.start()
 	unit = 'F'
@@ -227,4 +233,9 @@ if __name__ == '__main__':
 			flags = ' '.join(flags),
 			hex = packet.hex()
 		)
-
+		
+		logfile = logfiles.get(packet.channel, None)
+		if logfile:
+			logfile.write("{0},{1},{2}\n".format(time.asctime(),temp,packet.hex()))
+			logfile.flush()
+		
