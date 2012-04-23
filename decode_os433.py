@@ -41,7 +41,7 @@ class rtlsdr_am_stream(gr.top_block):
 
 		self.osmosdr_source = osmosdr.source_c("")
 		self.osmosdr_source.set_center_freq(freq)
-		self.osmosdr_source.set_samp_rate(device_rate)
+		self.osmosdr_source.set_sample_rate(device_rate)
 
 		taps = firdes.low_pass(1, device_rate, 40000, 5000, firdes.WIN_HAMMING, 6.76)
 		self.freq_filter = gr.freq_xlating_fir_filter_ccc(25, taps, -freq_offs, device_rate)
