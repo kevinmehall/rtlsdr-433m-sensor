@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Decoder for Oregon Scientifics wireless temperature sensors (version 1 protocol)
 using RTL-SDR and GNU Radio
@@ -200,13 +201,23 @@ class Packet(object):
 		return ' '.join('%02X'%x for x in self.bytes)
 		
 if __name__ == '__main__':
+	import sys
 	import time
-	logfilebase = 'log'
+	from optparse import OptionParser
+	
+	parser = OptionParser(usage='%prog [options]')
+	parser.add_option('-l', '--log', type='string', dest='log',
+		metavar='NAME', help='Log readings to <NAME><CHANNEL>.csv')
+	parser.add_option('-a', '--audio', action='store_true', dest='audio',
+		help="Play AM-demodulated signal to the speakers")
+	(options, args) = parser.parse_args(sys.argv[1:])
+	
 	logfiles = {}
-	for channel in range(1, 3+1):
-		logfiles[channel] = open("{0}{1}.csv".format(logfilebase, channel), 'at')
+	if options.log:
+		for channel in range(1, 3+1):
+			logfiles[channel] = open("{0}{1}.csv".format(options.log, channel), 'at')
 
-	stream = rtlsdr_am_stream(freq, freq_offs, decimate_am=1, play_audio=True)
+	stream = rtlsdr_am_stream(freq, freq_offs, decimate_am=2, play_audio=options.audio)
 	stream.start()
 	unit = 'F'
 	for packet in decode_osv1(stream):
